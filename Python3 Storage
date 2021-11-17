@@ -1,4 +1,4 @@
-#python3testing3
+#Tip Calculator Script
 print("Welcome to the Tip Calculator")
 
 bill = float(input("What is your total bill? $"))
