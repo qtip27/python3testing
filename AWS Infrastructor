@@ -1,4 +1,5 @@
-#Resource
+#Resources
+#VPC
 resource "aws_vpc" "mtc_vpc" {
   cidr_block           = "10.45.0.0/16"
   enable_dns_hostnames = true
@@ -9,8 +10,9 @@ resource "aws_vpc" "mtc_vpc" {
   }
 }
 
+#SUBNET'S
 resource "aws_subnet" "mtc_public_subnet" {
-  vpc_id                  = aws_vpc.mtc_vpc.id #Referancing the VPC above with the ID of that VPC
+  vpc_id                  = aws_vpc.mtc_vpc.id #Referencing the VPC above with the ID of that VPC
   cidr_block              = "10.45.1.0/24"
   map_public_ip_on_launch = true
   availability_zone       = "us-east-2a"
@@ -20,6 +22,7 @@ resource "aws_subnet" "mtc_public_subnet" {
   }
 }
 
+#INTERNET GATEWAY
 resource "aws_internet_gateway" "mtc_internet_gateway" {
   vpc_id = aws_vpc.mtc_vpc.id
 
@@ -28,6 +31,7 @@ resource "aws_internet_gateway" "mtc_internet_gateway" {
   }
 }
 
+#ROUTING TABLE
 resource "aws_route_table" "mtc_public_rt" {
   vpc_id = aws_vpc.mtc_vpc.id
 
@@ -36,17 +40,20 @@ resource "aws_route_table" "mtc_public_rt" {
   }
 }
 
+#DEFAULT ROUTE
 resource "aws_route" "default_route" {
   route_table_id         = aws_route_table.mtc_public_rt.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.mtc_internet_gateway.id
 }
 
+#ROUTING TABLE ASSOC.
 resource "aws_route_table_association" "mtc_public_assoc" {
   subnet_id      = aws_subnet.mtc_public_subnet.id
   route_table_id = aws_route_table.mtc_public_rt.id
 }
 
+#SECURITY GROUP
 resource "aws_security_group" "mtc_sg" {
   name        = "dev_sg"
   description = "dev security group"
@@ -66,36 +73,39 @@ resource "aws_security_group" "mtc_sg" {
   }
 }
 
+#KEY PAIR
 resource "aws_key_pair" "mtc_auth" {
-  key_name = "mtckey"
+  key_name   = "mtckey"
   public_key = file("~/.ssh/mtckey.pub")
 }
 
+#EC2 INSTANCE W/ SSH CONFIG. (NEED TO UPDATE THE USERDATA)
 resource "aws_instance" "dev_node" {
-  instance_type = "t2.micro"
-  ami = data.aws_ami.server_ami.id
-  key_name = aws_key_pair.mtc_auth.id
+  instance_type          = "t2.micro"
+  ami                    = data.aws_ami.server_ami.id
+  key_name               = aws_key_pair.mtc_auth.id
   vpc_security_group_ids = [aws_security_group.mtc_sg.id]
-  subnet_id = aws_subnet.mtc_public_subnet.id
-  user_data = file("userdata.tpl")
-  
+  subnet_id              = aws_subnet.mtc_public_subnet.id
+  user_data              = file("userdata.tpl")
+
   root_block_device {
     volume_size = 10
   }
 
   tags = {
     Name = "dev-node"
-  }  
+  }
   provisioner "local-exec" {
     command = templatefile("${var.host_os}-ssh-config.tpl", {
-        hostname = self.public_ip,
-        user = "ubuntu"
-        identityfile = "~/.shh/mtckey"
+      hostname     = self.public_ip,
+      user         = "ubuntu"
+      identityfile = "~/.shh/mtckey"
     })
     interpreter = var.host_os == "windows" ? ["Powershell", "-Command"] : ["bash", "-c"]
   }
 }
 
+#NETWORK FIREWALL WITH IPS RULES
 resource "aws_networkfirewall_rule_group" "mtc_rule" {
   capacity = 100
   name     = "mtc_rule"
@@ -139,6 +149,7 @@ resource "aws_networkfirewall_firewall" "mtc_firewall" {
   }
 }
 
+#VPC FLOW LOGS (NEED TO FINISH DEFINING ALL PARTS)
 /*
 resource "aws_flow_log" "mtc_flow" {
   iam_role_arn    = aws_iam_role.vpc_flow_logs.arn
