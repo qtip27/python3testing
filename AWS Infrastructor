@@ -1,7 +1,7 @@
 #Resources
 #VPC
 resource "aws_vpc" "mtc_vpc" {
-  cidr_block           = "10.45.0.0/16"
+  cidr_block           = ""
   enable_dns_hostnames = true
   enable_dns_support   = true
 
@@ -13,9 +13,9 @@ resource "aws_vpc" "mtc_vpc" {
 #SUBNET'S
 resource "aws_subnet" "mtc_public_subnet" {
   vpc_id                  = aws_vpc.mtc_vpc.id #Referencing the VPC above with the ID of that VPC
-  cidr_block              = "10.45.1.0/24"
+  cidr_block              = ""
   map_public_ip_on_launch = true
-  availability_zone       = "us-east-2a"
+  availability_zone       = ""
 
   tags = {
     Name = "dev-public"
@@ -75,8 +75,8 @@ resource "aws_security_group" "mtc_sg" {
 
 #KEY PAIR
 resource "aws_key_pair" "mtc_auth" {
-  key_name   = "mtckey"
-  public_key = file("~/.ssh/mtckey.pub")
+  key_name   = ""
+  public_key = file("")
 }
 
 #EC2 INSTANCE W/ SSH CONFIG. (NEED TO UPDATE THE USERDATA)
@@ -86,7 +86,7 @@ resource "aws_instance" "dev_node" {
   key_name               = aws_key_pair.mtc_auth.id
   vpc_security_group_ids = [aws_security_group.mtc_sg.id]
   subnet_id              = aws_subnet.mtc_public_subnet.id
-  user_data              = file("userdata.tpl")
+  user_data              = file("")
 
   root_block_device {
     volume_size = 10
@@ -96,10 +96,10 @@ resource "aws_instance" "dev_node" {
     Name = "dev-node"
   }
   provisioner "local-exec" {
-    command = templatefile("${var.host_os}-ssh-config.tpl", {
+    command = templatefile("${}-ssh-config.tpl", {
       hostname     = self.public_ip,
       user         = "ubuntu"
-      identityfile = "~/.shh/mtckey"
+      identityfile = ""
     })
     interpreter = var.host_os == "windows" ? ["Powershell", "-Command"] : ["bash", "-c"]
   }
@@ -110,7 +110,7 @@ resource "aws_networkfirewall_rule_group" "mtc_rule" {
   capacity = 100
   name     = "mtc_rule"
   type     = "STATEFUL"
-  rules    = file("local.rules")
+  rules    = file("")
 
   tags = {
     Tag1 = "Value1"
